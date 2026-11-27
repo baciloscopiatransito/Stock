@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Stock del laboratorio</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#00463c">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Stock">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<script src="config.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: clínico, sobrio, de mesada de laboratorio: dice qué hay y qué falta.
+   IDEA: la planilla de stock pegada en la heladera, pero que hace las cuentas sola.
+   PICTURE: la tabla de insumos con barra de días de cobertura, arriba de todo.
+   COLOUR and TYPE: verde profundo #00463c, blanco, lima #e6f5c8, coral #ff6f59 para faltantes; Inter Tight + Inter.
+   LAYOUT: banda verde con cifras y acciones, alertas, tabla, historial abajo. */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#0c1412);--ink:light-dark(#11201d,#e8efec);--mut:light-dark(#5b6b67,#93a39f);--line:light-dark(#dfe6e3,#24322f);--card:light-dark(#f5f8f7,#121d1b);--g:#00463c;--lime:#e6f5c8;--co:#ff6f59;--coS:light-dark(#fff0ed,#3a1c17);--ok:light-dark(#1d7a5c,#6fd3a8)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(24px,4vw,48px) max(5vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1,h2{font-family:"Inter Tight",Inter,sans-serif;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(30px,5vw,46px)}h2{font-size:24px;margin-bottom:14px}
+.top{background:var(--g);color:#fff;padding-top:calc(clamp(24px,4vw,48px) + env(safe-area-inset-top))}
+.top p{margin:6px 0 0;color:var(--lime)}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:#ffffff30;margin-top:24px;border-block:1px solid #ffffff30}
+.figs div{background:var(--g);padding:12px 4px}
+.figs b{display:block;font:700 clamp(26px,4vw,36px)/1 "Inter Tight",sans-serif}
+.figs span{font-size:14px;color:var(--lime)}
+.figs .bad b{color:var(--co)}
+.acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+button,.btn{font:600 15px Inter,sans-serif;min-height:44px;padding:0 18px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--co);outline-offset:2px}
+.top button{border:0}.in{background:var(--lime);color:var(--g)}.out{background:var(--co);color:#2a0a04}.ghost{background:transparent;color:#fff;border:1px solid #ffffff60!important}
+.alert{background:var(--coS);border-inline-start:5px solid var(--co);padding:14px 16px;border-radius:8px;margin-bottom:14px}
+.alert b{color:light-dark(#b3321f,#ff9a89)}
+.news{background:light-dark(#eef8e2,#16261a);border-inline-start:5px solid var(--ok)}
+.news ul{margin:6px 0 0;padding-inline-start:18px}
+table{width:100%;border-collapse:collapse}
+th{font-size:13px;color:var(--mut);font-weight:600;text-align:left;padding:8px;border-bottom:2px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.name{font-weight:600}.u{color:var(--mut);font-size:14px}
+.meter{height:8px;background:var(--line);border-radius:4px;overflow:hidden;width:100%;min-width:80px;margin-top:4px}
+.meter i{display:block;height:100%;background:var(--ok)}
+.low .meter i{background:var(--co)}.low .stk{color:light-dark(#b3321f,#ff9a89);font-weight:700}
+.rowb{display:flex;gap:6px;justify-content:flex-end}.rowb button{min-width:44px;padding:0 10px}
+.vto{display:block;font-size:13px;color:var(--mut)}.vto.soon{color:light-dark(#b3321f,#ff9a89);font-weight:600}
+.delit{background:transparent;color:var(--mut)}.delit.sure{background:var(--co);color:#2a0a04;border-color:var(--co)}
+.empty{padding:28px;text-align:center;color:var(--mut);border:1px dashed var(--line);border-radius:12px}
+.hist td{font-size:15px}.tag{font-size:13px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.tIn{background:light-dark(#e6f5c8,#203a1c);color:light-dark(#1f4d10,#c9ecb0)}.tOut{background:var(--coS);color:light-dark(#9c2a19,#ffb3a6)}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:12px}
+select,input{font:16px Inter,sans-serif;min-height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);width:100%}
+.dlg{position:fixed;inset:0;background:#0008;display:none;align-items:center;justify-content:center;padding:16px;z-index:9}
+.dlg.on{display:flex}
+.box{background:var(--bg);border-radius:16px;padding:24px;width:min(460px,100%);max-height:92vh;overflow:auto}
+.box label{display:block;font-size:14px;font-weight:600;margin:12px 0 4px}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.seg button[aria-pressed=true].in{outline:3px solid var(--g)}.seg button[aria-pressed=true].out{outline:3px solid #9c2a19}
+.seg button[aria-pressed=false]{opacity:.45}
+.foot{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.pri{background:var(--g);color:#fff;border:0}
+.err{color:light-dark(#b3321f,#ff9a89);font-size:14px;min-height:20px;margin-top:8px}
+#toasts{position:fixed;bottom:calc(16px + env(safe-area-inset-bottom));right:16px;left:16px;display:flex;flex-direction:column;align-items:flex-end;gap:8px;z-index:10;pointer-events:none}
+.toast{background:var(--ink);color:var(--bg);padding:12px 16px;border-radius:10px;max-width:420px;box-shadow:0 6px 24px #0004;pointer-events:auto;animation:up .25s ease}
+@keyframes up{from{transform:translateY(10px);opacity:0}}
+@media(prefers-reduced-motion:reduce){.toast{animation:none}}
+.note{font-size:14px;color:var(--mut);margin-top:10px}
+.scroll{overflow-x:auto}
+@media(max-width:600px){table{font-size:14px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px;border-bottom:1px solid var(--line)}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:8.5em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:8em;margin-inline-start:-8.5em;color:var(--mut);font-size:13px}.stack td:empty{display:none}.rowb{justify-content:flex-start}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="top band"><div class="wrap">
+  <h1 id="headline">Stock del laboratorio</h1>
+  <p id="sub">Cargando datos…</p>
+  <div class="figs">
+    <div><b id="fItems">–</b><span>insumos</span></div>
+    <div id="fLowBox"><b id="fLow">–</b><span>bajo mínimo o &lt; 7 días</span></div>
+    <div><b id="fToday">–</b><span>movimientos hoy</span></div>
+  </div>
+  <div class="acts">
+    <button class="in" data-open="in">+ Registrar ingreso</button>
+    <button class="out" data-open="out">− Registrar egreso</button>
+    <button class="ghost" id="bNew">Nuevo insumo</button>
+    <button class="ghost" id="bSet">Ajustes</button>
+  </div>
+</div></header>
+
+<main class="band"><div class="wrap">
+  <div id="newsBox"></div>
+  <div id="alerts"></div>
+  <h2>Insumos</h2>
+  <div id="stock"></div>
+  <p class="note">Consumo mensual = egresos de los últimos 30 días (si el insumo tiene menos de 30 días cargado, se proyecta a 30 días). Días de cobertura = stock ÷ consumo diario promedio. Lotes: se asume que se usa primero lo que vence antes; se avisa cuando un lote con stock vence en 30 días o menos.</p>
+
+  <div style="margin-top:40px">
+    <div class="bar"><h2 style="margin:0">Historial de movimientos</h2>
+      <div style="width:min(280px,100%)"><select id="hFilter" aria-label="Filtrar por insumo"><option value="">Todos los insumos</option></select></div>
+    </div>
+    <div id="hist"></div>
+  </div>
+</div></main>
+
+<div class="dlg" id="dMov" role="dialog" aria-modal="true" aria-labelledby="tMov"><form class="box" id="fMov">
+  <h2 id="tMov">Registrar movimiento</h2>
+  <div class="seg"><button type="button" class="in" data-t="in" aria-pressed="true">Ingreso</button><button type="button" class="out" data-t="out" aria-pressed="false">Egreso</button></div>
+  <label for="mItem">Insumo</label><select id="mItem" required></select>
+  <label for="mQty">Cantidad <span id="mUnit" class="u"></span></label><input id="mQty" type="number" inputmode="decimal" min="0" step="any" required>
+  <label for="mWho">Responsable</label><input id="mWho" maxlength="40" placeholder="Tu nombre" required>
+  <div id="mLotBox" style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px">
+    <div><label for="mLote">Lote</label><input id="mLote" maxlength="40" autocomplete="off"></div>
+    <div><label for="mVto">Vencimiento</label><input id="mVto" type="date"></div>
+  </div>
+  <label for="mDate">Fecha y hora</label><input id="mDate" type="datetime-local" required>
+  <label for="mNote">Nota (destino, observaciones…)</label><input id="mNote" maxlength="120">
+  <div class="err" id="mErr"></div>
+  <div class="foot"><button type="button" data-close>Cancelar</button><button class="pri" type="submit">Guardar</button></div>
+</form></div>
+
+<div class="dlg" id="dItem" role="dialog" aria-modal="true" aria-labelledby="tItem"><form class="box" id="fItem">
+  <h2 id="tItem">Nuevo insumo</h2>
+  <label for="iName">Nombre</label><input id="iName" maxlength="60" required placeholder="Ej.: Tubos MGIT 7 mL">
+  <label for="iUnit">Unidad</label><input id="iUnit" maxlength="20" required placeholder="Ej.: unidades, cajas, mL">
+  <label for="iMin">Stock mínimo (alerta)</label><input id="iMin" type="number" min="0" step="any" value="0">
+  <label for="iIni">Stock inicial</label><input id="iIni" type="number" min="0" step="any" value="0">
+  <div class="err" id="iErr"></div>
+  <div class="foot"><button type="button" data-close>Cancelar</button><button class="pri" type="submit">Crear</button></div>
+</form></div>
+
+<div class="dlg" id="dSet" role="dialog" aria-modal="true" aria-labelledby="tSet"><form class="box" id="fSet">
+  <h2 id="tSet">Entrar al stock</h2>
+  <p class="note">Pedile la clave del laboratorio a quien administra la app. Se guarda en este celular.</p>
+  <label for="sKey">Clave del laboratorio</label><input id="sKey" required autocomplete="off">
+  <label for="sWho">Tu nombre</label><input id="sWho" maxlength="40" required>
+  <label><input type="checkbox" id="sMute" style="width:auto;min-height:auto;margin-inline-end:8px">No mostrar avisos en pantalla</label>
+  <div class="err" id="sErr"></div>
+  <div class="foot"><button type="button" data-close id="sCancel">Cancelar</button><button class="pri" type="submit">Entrar</button></div>
+</form></div>
+
+<div id="toasts" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>
